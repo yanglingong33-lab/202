@@ -44,7 +44,9 @@ export default function App() {
           <CanvasArea />
           
           {/* Right Side (AI Agent) */}
-          {showAgent && <AgentPanel />}
+          <div className={`${showAgent ? 'flex' : 'hidden'} shrink-0 h-full`}>
+            <AgentPanel />
+          </div>
         </main>
 
         {/* Status Bar */}

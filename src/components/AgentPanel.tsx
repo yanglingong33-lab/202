@@ -31,9 +31,15 @@ export const AgentPanel = () => {
 上下文环境: ${canvasContext}
 请提供简明扼要的回复，保持专业、高级的设计师口吻。`;
 
-            const res = await fetch('/api/chat', {
+            const API_KEY = import.meta.env.VITE_APIMART_API_KEY || 'sk-vkQ5Q2K7Ap8BkQujcjVeFE9xMRrQbJaIR0vo8pP7Jj5aqpR4';
+            const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.apimart.ai/v1';
+
+            const res = await fetch(`${API_BASE}/chat/completions`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
                 body: JSON.stringify({
                     model: 'gemini-3.1-pro-preview',
                     messages: [

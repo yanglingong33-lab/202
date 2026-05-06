@@ -82,9 +82,22 @@ export const Toolbar = () => {
                 reqBody.image = parentNode.src; // Assuming apimart proxy accepts this
             }
 
-            const res = await fetch('/api/images', {
+            const API_KEY = import.meta.env.VITE_APIMART_API_KEY || 'sk-vkQ5Q2K7Ap8BkQujcjVeFE9xMRrQbJaIR0vo8pP7Jj5aqpR4';
+            const API_BASE_FULL = import.meta.env.VITE_API_BASE_URL || 'https://api.apimart.ai/v1';
+            let API_BASE = API_BASE_FULL;
+            if (API_BASE.endsWith('/images/generations')) {
+                API_BASE = API_BASE.replace('/images/generations', '');
+            }
+            if (API_BASE.endsWith('/')) {
+                API_BASE = API_BASE.slice(0, -1);
+            }
+
+            const res = await fetch(`${API_BASE}/images/generations`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_KEY}`
+                },
                 body: JSON.stringify(reqBody)
             });
             const textData = await res.text();
@@ -96,8 +109,50 @@ export const Toolbar = () => {
             }
             if (!res.ok) throw new Error(data.error?.message || data.error || '生成失败');
 
-            if (data.data && data.data.length > 0) {
-                const url = data.data[0].url || data.data[0].b64_json;
+            let urls = [];
+            // Check if apimart returned a task_id
+            if (data.data && data.data[0] && data.data[0].task_id) {
+                const taskId = data.data[0].task_id;
+                let isCompleted = false;
+                let taskData: any = {};
+                
+                // Poll task endpoint
+                while (!isCompleted) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    const taskRes = await fetch(`${API_BASE}/tasks/${taskId}`, {
+                        method: 'GET',
+                        headers: { 'Authorization': `Bearer ${API_KEY}` }
+                    });
+                    
+                    const taskText = await taskRes.text();
+                    try {
+                        taskData = taskText ? JSON.parse(taskText) : {};
+                    } catch (e) {
+                         throw new Error(`Failed to parse task JSON. Status: ${taskRes.status}. Output: ${taskText.substring(0, 200)}`);
+                    }
+                    
+                    if (taskData.data && taskData.data.status === 'completed') {
+                        isCompleted = true;
+                    } else if (taskData.data && taskData.data.status === 'failed') {
+                        throw new Error('Image generation task failed.');
+                    }
+                }
+                
+                // Standardize output for frontend
+                if (taskData.data.result && taskData.data.result.images) {
+                    urls = taskData.data.result.images.map((img: any) => ({
+                        url: Array.isArray(img.url) ? img.url[0] : img.url
+                    }));
+                } else if (taskData.data.images) {
+                    urls = taskData.data.images.map((img: any) => ({ url: img.url || img }));
+                }
+            } else {
+                urls = data.data || [];
+            }
+
+            if (urls && urls.length > 0) {
+                const url = urls[0].url || urls[0].b64_json;
                 const imageSrc = url.startsWith('http') ? url : `data:image/png;base64,${url}`;
                 
                 updateItem(newNodeId, {
