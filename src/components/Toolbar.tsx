@@ -87,7 +87,13 @@ export const Toolbar = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(reqBody)
             });
-            const data = await res.json();
+            const textData = await res.text();
+            let data;
+            try {
+                data = textData ? JSON.parse(textData) : {};
+            } catch (e) {
+                throw new Error(`Invalid response from server: ${textData.substring(0, 100)}`);
+            }
             if (!res.ok) throw new Error(data.error?.message || data.error || '生成失败');
 
             if (data.data && data.data.length > 0) {

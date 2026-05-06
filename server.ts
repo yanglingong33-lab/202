@@ -31,13 +31,20 @@ async function startServer() {
         body: JSON.stringify(req.body)
       });
       
-      const data = await response.json();
+      const text = await response.text();
+      let data;
+      try {
+          data = text ? JSON.parse(text) : {};
+      } catch (e) {
+          throw new Error(`Failed to parse JSON target. Status: ${response.status}. Response text: ${text.substring(0, 200)}`);
+      }
+      
       if (!response.ok) {
-        throw new Error(data.error?.message || 'Failed to fetch from apimart chat');
+        throw new Error(data.error?.message || `Failed to fetch from apimart chat: ${response.statusText}`);
       }
       res.json(data);
     } catch (e: any) {
-      console.error(e);
+      console.error('/api/chat error:', e);
       res.status(500).json({ error: e.message });
     }
   });
@@ -54,7 +61,14 @@ async function startServer() {
             body: JSON.stringify(req.body)
         });
 
-        const data = await response.json();
+        const text = await response.text();
+        let data;
+        try {
+            data = text ? JSON.parse(text) : {};
+        } catch (e) {
+            throw new Error(`Failed to parse JSON image target. Status: ${response.status}. Response text: ${text.substring(0, 200)}`);
+        }
+        
         if (!response.ok) {
            throw new Error(data.error?.message || 'Failed to fetch from apimart images: ' + JSON.stringify(data));
         }
@@ -74,7 +88,12 @@ async function startServer() {
                     headers: { 'Authorization': `Bearer ${API_KEY}` }
                 });
                 
-                taskData = await taskRes.json();
+                const taskText = await taskRes.text();
+                try {
+                    taskData = taskText ? JSON.parse(taskText) : {};
+                } catch (e) {
+                     throw new Error(`Failed to parse task JSON. Status: ${taskRes.status}. Output: ${taskText.substring(0, 200)}`);
+                }
                 
                 if (taskData.data && taskData.data.status === 'completed') {
                     isCompleted = true;
