@@ -233,9 +233,11 @@ export const CanvasArea = () => {
         
         const scaleBy = 1.1;
         const stage = stageRef.current;
+        if (!stage) return;
         const oldScale = stage.scaleX();
 
         const pointerPosition = stage.getPointerPosition();
+        if (!pointerPosition) return;
 
         const mousePointTo = {
             x: (pointerPosition.x - stage.x()) / oldScale,
